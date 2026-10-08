@@ -40,7 +40,7 @@ fun AddToCollectionScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    val collectedHandles by viewModel.collectedHandles.collectAsState()
+    val collectedKeys by viewModel.collectedKeys.collectAsState()
 
     LaunchedEffect(viewModel.query) {
         delay(400)
@@ -80,10 +80,10 @@ fun AddToCollectionScreen(
                 contentPadding = PaddingValues(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                items(viewModel.searchResults, key = { it.handle }) { product ->
+                items(viewModel.searchResults, key = { "${it.store}:${it.handle}" }) { product ->
                     CollectionSearchResultRow(
                         product = product,
-                        isCollected = product.handle in collectedHandles,
+                        isCollected = (product.store to product.handle) in collectedKeys,
                         onClick = { viewModel.selectSearchResult(product) },
                     )
                 }
@@ -113,7 +113,7 @@ private fun CollectionSearchResultRow(product: SearchProduct, isCollected: Boole
                 val priceLabel = product.priceMin?.let { min ->
                     if (product.priceMax != null && product.priceMax != min) "$$min - $${product.priceMax}" else "$$min"
                 }
-                priceLabel?.let { Text(it) }
+                Text(listOfNotNull(product.store.displayName, priceLabel).joinToString(" · "))
             },
             leadingContent = {
                 AsyncImage(

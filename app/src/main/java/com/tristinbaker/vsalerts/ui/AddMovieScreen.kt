@@ -39,7 +39,7 @@ fun AddMovieScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    val trackedHandles by viewModel.trackedHandles.collectAsState()
+    val trackedKeys by viewModel.trackedKeys.collectAsState()
 
     LaunchedEffect(viewModel.query) {
         delay(400)
@@ -79,10 +79,10 @@ fun AddMovieScreen(
                 contentPadding = PaddingValues(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                items(viewModel.searchResults, key = { it.handle }) { product ->
+                items(viewModel.searchResults, key = { "${it.store}:${it.handle}" }) { product ->
                     SearchResultRow(
                         product = product,
-                        isTracked = product.handle in trackedHandles,
+                        isTracked = (product.store to product.handle) in trackedKeys,
                         onClick = { viewModel.selectSearchResult(product) },
                     )
                 }
@@ -110,7 +110,7 @@ private fun SearchResultRow(product: SearchProduct, isTracked: Boolean, onClick:
                 val priceLabel = product.priceMin?.let { min ->
                     if (product.priceMax != null && product.priceMax != min) "$$min - $${product.priceMax}" else "$$min"
                 }
-                priceLabel?.let { Text(it) }
+                Text(listOfNotNull(product.store.displayName, priceLabel).joinToString(" · "))
             },
             leadingContent = {
                 AsyncImage(

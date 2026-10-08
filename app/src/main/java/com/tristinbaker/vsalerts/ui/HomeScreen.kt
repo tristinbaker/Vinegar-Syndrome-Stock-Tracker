@@ -76,7 +76,7 @@ private fun MovieRow(
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = {
-            val url = "https://vinegarsyndrome.com/products/${movie.handle}"
+            val url = movie.store.productUrl(movie.handle)
             context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
         },
     ) {

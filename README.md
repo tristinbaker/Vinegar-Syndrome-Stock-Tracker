@@ -1,6 +1,6 @@
 # VS Tracker
 
-An Android app for tracking Vinegar Syndrome limited edition releases: stock levels, price drops, sales, and your personal collection.
+An Android app for tracking Vinegar Syndrome and Mélusine limited edition releases: stock levels, price drops, sales, and your personal collection.
 
 ## What it does
 
@@ -8,13 +8,13 @@ Vinegar Syndrome sells limited edition physical media that sells out permanently
 
 The app has two tabs:
 
-**Alerts**: type a movie title, search results come straight from Vinegar Syndrome's site, pick which edition to track (a title can have a "Limited Edition Slipcase" and a "Standard Edition" as separate variants), and the app checks it periodically in the background. You get a notification when:
+**Alerts**: type a movie title, search results come straight from Vinegar Syndrome's and Mélusine's sites (each result is labeled with its store), pick which edition to track (a title can have a "Limited Edition Slipcase" and a "Standard Edition" as separate variants), and the app checks it periodically in the background. You get a notification when:
 
 * Stock drops below a threshold (500 units by default, configurable in Settings)
 * The price drops from what was last seen
 * An item goes on sale (price below its compare at price)
 
-**Collection**: a record of releases you actually own, grouped by Vinegar Syndrome's imprint labels in this order: Vinegar Syndrome, Vinegar Syndrome Archive, Vinegar Syndrome Labs, Vinegar Syndrome Pictures, Vinegar Syndrome Ultra, Cinematographe, Degausser Video, Distribpix, Iconoscope, Pink Line, Reviver. Any other label sorts alphabetically after those. You can add a release directly from search, or with one tap from an Alerts row (which then offers to stop tracking stock for that item, since you already own it).
+**Collection**: a record of releases you actually own, grouped by Vinegar Syndrome's imprint labels in this order: Vinegar Syndrome, Vinegar Syndrome Archive, Vinegar Syndrome Labs, Vinegar Syndrome Pictures, Vinegar Syndrome Ultra, Cinematographe, Degausser Video, Distribpix, Iconoscope, Mélusine, Pink Line, Reviver. Any other label sorts alphabetically after those. You can add a release directly from search, or with one tap from an Alerts row (which then offers to stop tracking stock for that item, since you already own it).
 
 ## How it works
 
@@ -22,7 +22,7 @@ There's no backend server. It's a self contained Android app using:
 
 * Shopify's storefront predictive search endpoint (`/search/suggest.json`) to resolve a typed title to a product
 * Shopify's `/products/{handle}.js` endpoint for each variant's price, compare at price, and availability
-* The `data-vs-inventory` attribute on each product page's `<product-inventory>` element for inventory quantity per variant, since that isn't exposed in any storefront JSON endpoint
+* Inventory quantity per variant scraped from the product page, since that isn't exposed in any storefront JSON endpoint: Vinegar Syndrome's theme has it in the `data-vs-inventory` attribute of the `<product-inventory>` element, Mélusine's in the `<script class="product-json">` blob
 * Room for local storage of tracked movies and collection items
 * WorkManager for periodic background checks (roughly every 30 minutes, subject to Android's battery optimization behavior)
 * Plain Android notifications for alerts
@@ -50,4 +50,4 @@ The release build type is signed with the debug keystore so it installs without 
 ## Limitations
 
 * Phone only: background checks can be delayed by Android's Doze mode if battery optimization is not disabled for the app.
-* Price/stock data is scraped from public page content rather than a stable documented API, so a Vinegar Syndrome theme change could break parsing. If that happens, the `product-inventory[data-vs-inventory]` selector in `network/VinegarSyndromeApi.kt` is the place to fix it.
+* Price/stock data is scraped from public page content rather than a stable documented API, so a theme change on either site could break parsing. If that happens, `fetchInventory` in `network/StorefrontApi.kt` is the place to fix it. Page requests must send an `Accept` header, or Shopify's bot check answers with a 403.

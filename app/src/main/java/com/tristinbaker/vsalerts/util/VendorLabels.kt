@@ -1,6 +1,6 @@
 package com.tristinbaker.vsalerts.util
 
-/** Vinegar Syndrome's imprints, in the order the collection should group/sort by. */
+/** Vinegar Syndrome's imprints plus Mélusine, in the order the collection should group/sort by. */
 val VENDOR_LABEL_ORDER = listOf(
     "Vinegar Syndrome",
     "Vinegar Syndrome Archive",
@@ -11,6 +11,7 @@ val VENDOR_LABEL_ORDER = listOf(
     "Degausser Video",
     "Distribpix",
     "Iconoscope",
+    "Mélusine",
     "Pink Line",
     "Reviver",
 )

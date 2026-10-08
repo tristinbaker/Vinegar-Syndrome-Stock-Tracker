@@ -11,7 +11,8 @@ import com.tristinbaker.vsalerts.data.CollectionItem
 import com.tristinbaker.vsalerts.network.ProductDetail
 import com.tristinbaker.vsalerts.network.ProductVariant
 import com.tristinbaker.vsalerts.network.SearchProduct
-import com.tristinbaker.vsalerts.network.VinegarSyndromeApi
+import com.tristinbaker.vsalerts.network.Store
+import com.tristinbaker.vsalerts.network.StorefrontApi
 import com.tristinbaker.vsalerts.network.normalizeImageUrl
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,19 +20,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_VENDOR_LABEL = "Vinegar Syndrome"
-
 /**
  * Mirrors AddMovieViewModel's search flow but saves into the owned-collection table instead
  * of setting up a price/stock watch — sold-out items are still valid to log as owned, so unlike
  * AddMovieViewModel this doesn't filter variants by stock.
  */
 class AddToCollectionViewModel(application: Application) : AndroidViewModel(application) {
-    private val api = VinegarSyndromeApi()
+    private val api = StorefrontApi()
     private val dao = AppDatabase.get(application).collectionItemDao()
 
-    val collectedHandles: StateFlow<Set<String>> = dao.observeAll()
-        .map { items -> items.map { it.handle }.toSet() }
+    val collectedKeys: StateFlow<Set<Pair<Store, String>>> = dao.observeAll()
+        .map { items -> items.map { it.store to it.handle }.toSet() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     var query by mutableStateOf("")
@@ -73,7 +72,7 @@ class AddToCollectionViewModel(application: Application) : AndroidViewModel(appl
         viewModelScope.launch {
             errorMessage = null
             try {
-                selectedProduct = api.fetchProduct(product.handle)
+                selectedProduct = api.fetchProduct(product.store, product.handle)
             } catch (t: Throwable) {
                 errorMessage = "Couldn't load ${product.title}: ${t.message}"
             }
@@ -88,7 +87,7 @@ class AddToCollectionViewModel(application: Application) : AndroidViewModel(appl
         viewModelScope.launch {
             isSaving = true
             try {
-                if (dao.findByHandle(product.handle) != null) {
+                if (dao.find(product.store, product.handle) != null) {
                     errorMessage = "${product.title} is already in your collection"
                     return@launch
                 }
@@ -96,7 +95,8 @@ class AddToCollectionViewModel(application: Application) : AndroidViewModel(appl
                     CollectionItem(
                         title = product.title,
                         handle = product.handle,
-                        vendorLabel = product.vendor?.takeIf { it.isNotBlank() } ?: DEFAULT_VENDOR_LABEL,
+                        store = product.store,
+                        vendorLabel = product.vendor?.takeIf { it.isNotBlank() } ?: product.store.displayName,
                         thumbnailUrl = normalizeImageUrl(variant.featuredImage?.src ?: product.featuredImage),
                         addedAt = System.currentTimeMillis(),
                     ),

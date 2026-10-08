@@ -67,7 +67,7 @@ private fun CollectionRow(item: CollectionItem, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = {
-            val url = "https://vinegarsyndrome.com/products/${item.handle}"
+            val url = item.store.productUrl(item.handle)
             context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
         },
     ) {

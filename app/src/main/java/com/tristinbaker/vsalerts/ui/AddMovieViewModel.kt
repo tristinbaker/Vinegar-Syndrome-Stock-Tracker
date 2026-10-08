@@ -11,7 +11,8 @@ import com.tristinbaker.vsalerts.data.TrackedMovie
 import com.tristinbaker.vsalerts.network.ProductDetail
 import com.tristinbaker.vsalerts.network.ProductVariant
 import com.tristinbaker.vsalerts.network.SearchProduct
-import com.tristinbaker.vsalerts.network.VinegarSyndromeApi
+import com.tristinbaker.vsalerts.network.Store
+import com.tristinbaker.vsalerts.network.StorefrontApi
 import com.tristinbaker.vsalerts.network.normalizeImageUrl
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,11 +21,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class AddMovieViewModel(application: Application) : AndroidViewModel(application) {
-    private val api = VinegarSyndromeApi()
+    private val api = StorefrontApi()
     private val dao = AppDatabase.get(application).trackedMovieDao()
 
-    val trackedHandles: StateFlow<Set<String>> = dao.observeAll()
-        .map { movies -> movies.map { it.handle }.toSet() }
+    val trackedKeys: StateFlow<Set<Pair<Store, String>>> = dao.observeAll()
+        .map { movies -> movies.map { it.store to it.handle }.toSet() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     var query by mutableStateOf("")
@@ -66,7 +67,7 @@ class AddMovieViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             errorMessage = null
             try {
-                val detail = api.fetchProduct(product.handle)
+                val detail = api.fetchProduct(product.store, product.handle)
                 val inStockVariants = detail.variants.filter { it.isInStock() }
                 if (inStockVariants.isEmpty()) {
                     errorMessage = "${product.title} is sold out"
@@ -87,7 +88,7 @@ class AddMovieViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             isSaving = true
             try {
-                if (dao.findByHandle(product.handle) != null) {
+                if (dao.find(product.store, product.handle) != null) {
                     errorMessage = "${product.title} is already being tracked"
                     return@launch
                 }
@@ -95,6 +96,7 @@ class AddMovieViewModel(application: Application) : AndroidViewModel(application
                     TrackedMovie(
                         title = product.title,
                         handle = product.handle,
+                        store = product.store,
                         variantId = variant.id,
                         variantTitle = variant.title,
                         thumbnailUrl = normalizeImageUrl(variant.featuredImage?.src ?: product.featuredImage),

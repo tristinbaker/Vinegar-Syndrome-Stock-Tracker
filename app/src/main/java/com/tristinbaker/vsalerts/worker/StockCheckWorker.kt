@@ -6,7 +6,7 @@ import androidx.work.WorkerParameters
 import com.tristinbaker.vsalerts.data.AppDatabase
 import com.tristinbaker.vsalerts.data.AppSettings
 import com.tristinbaker.vsalerts.data.TrackedMovie
-import com.tristinbaker.vsalerts.network.VinegarSyndromeApi
+import com.tristinbaker.vsalerts.network.StorefrontApi
 import com.tristinbaker.vsalerts.network.normalizeImageUrl
 import com.tristinbaker.vsalerts.notification.postAlertNotification
 import com.tristinbaker.vsalerts.util.formatCents
@@ -19,7 +19,7 @@ class StockCheckWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
 
-    private val api = VinegarSyndromeApi()
+    private val api = StorefrontApi()
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val dao = AppDatabase.get(applicationContext).trackedMovieDao()
@@ -39,7 +39,7 @@ class StockCheckWorker(
     }
 
     private suspend fun checkMovie(movie: TrackedMovie, dao: com.tristinbaker.vsalerts.data.TrackedMovieDao, settings: AppSettings) {
-        val product = api.fetchProduct(movie.handle)
+        val product = api.fetchProduct(movie.store, movie.handle)
         val variant = product.variants.firstOrNull { it.id == movie.variantId } ?: return
 
         val wasOnSale = movie.lastCompareAtPriceCents != null && movie.lastCompareAtPriceCents > movie.lastPriceCents
@@ -64,7 +64,7 @@ class StockCheckWorker(
                 notificationId = movie.id.toInt(),
                 title = movie.title,
                 message = messages.joinToString(" · ").replaceFirstChar { it.uppercase() },
-                productUrl = "https://vinegarsyndrome.com/products/${movie.handle}",
+                productUrl = movie.store.productUrl(movie.handle),
             )
         }
 

@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_VENDOR_LABEL = "Vinegar Syndrome"
-
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.get(application).trackedMovieDao()
     private val collectionDao = AppDatabase.get(application).collectionItemDao()
@@ -31,7 +29,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addToCollection(movie: TrackedMovie, onResult: (message: String, added: Boolean) -> Unit) {
         viewModelScope.launch {
-            if (collectionDao.findByHandle(movie.handle) != null) {
+            if (collectionDao.find(movie.store, movie.handle) != null) {
                 onResult("${movie.title} is already in your collection", false)
                 return@launch
             }
@@ -39,7 +37,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 CollectionItem(
                     title = movie.title,
                     handle = movie.handle,
-                    vendorLabel = movie.vendorLabel ?: DEFAULT_VENDOR_LABEL,
+                    store = movie.store,
+                    vendorLabel = movie.vendorLabel ?: movie.store.displayName,
                     thumbnailUrl = movie.thumbnailUrl,
                     addedAt = System.currentTimeMillis(),
                 ),

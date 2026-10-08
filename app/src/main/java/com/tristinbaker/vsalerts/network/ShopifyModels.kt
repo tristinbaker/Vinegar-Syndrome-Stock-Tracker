@@ -2,6 +2,7 @@ package com.tristinbaker.vsalerts.network
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class SuggestResponse(
@@ -29,6 +30,8 @@ data class SearchProduct(
     @SerialName("compare_at_price_min") val compareAtPriceMin: String? = null,
     @SerialName("compare_at_price_max") val compareAtPriceMax: String? = null,
     val image: String? = null,
+    // Not in the response; set by the API from whichever store returned the result.
+    @Transient val store: Store = Store.VINEGAR_SYNDROME,
 )
 
 @Serializable
@@ -41,6 +44,7 @@ data class ProductDetail(
     // Product-level fallback image; single-variant products often leave the variant's own
     // featured_image null and rely on this instead.
     @SerialName("featured_image") val featuredImage: String? = null,
+    @Transient val store: Store = Store.VINEGAR_SYNDROME,
 )
 
 @Serializable
@@ -64,4 +68,16 @@ data class FeaturedImage(
 @Serializable
 data class VariantInventory(
     @SerialName("q") val quantity: Int? = null,
+)
+
+/** The `<script class="product-json">` blob some themes (e.g. Mélusine's) embed on product pages. */
+@Serializable
+data class ProductPageJson(
+    val variants: List<ProductPageVariant> = emptyList(),
+)
+
+@Serializable
+data class ProductPageVariant(
+    val id: Long,
+    @SerialName("inventory_quantity") val inventoryQuantity: Int? = null,
 )
