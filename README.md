@@ -21,7 +21,8 @@ The app has two tabs:
 There's no backend server. It's a self contained Android app using:
 
 * Shopify's storefront predictive search endpoint (`/search/suggest.json`) to resolve a typed title to a product
-* The `product-json` script tag embedded in each Vinegar Syndrome product page for exact price, compare at price, and inventory quantity per variant, since that data is not exposed in the storefront's JSON API
+* Shopify's `/products/{handle}.js` endpoint for each variant's price, compare at price, and availability
+* The `data-vs-inventory` attribute on each product page's `<product-inventory>` element for inventory quantity per variant, since that isn't exposed in any storefront JSON endpoint
 * Room for local storage of tracked movies and collection items
 * WorkManager for periodic background checks (roughly every 30 minutes, subject to Android's battery optimization behavior)
 * Plain Android notifications for alerts
@@ -49,4 +50,4 @@ The release build type is signed with the debug keystore so it installs without 
 ## Limitations
 
 * Phone only: background checks can be delayed by Android's Doze mode if battery optimization is not disabled for the app.
-* Price/stock data is scraped from public page content rather than a stable documented API, so a Vinegar Syndrome theme change could break parsing. If that happens, the `product-json` selector in `network/VinegarSyndromeApi.kt` is the place to fix it.
+* Price/stock data is scraped from public page content rather than a stable documented API, so a Vinegar Syndrome theme change could break parsing. If that happens, the `product-inventory[data-vs-inventory]` selector in `network/VinegarSyndromeApi.kt` is the place to fix it.
