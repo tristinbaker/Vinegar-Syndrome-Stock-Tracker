@@ -59,3 +59,9 @@ data class ProductVariant(
 data class FeaturedImage(
     val src: String? = null,
 )
+
+/** One entry of the product page's `data-vs-inventory` map, keyed by variant id. */
+@Serializable
+data class VariantInventory(
+    @SerialName("q") val quantity: Int? = null,
+)

@@ -13,12 +13,12 @@ private const val BASE_URL = "https://vinegarsyndrome.com"
 private const val USER_AGENT =
     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
 
-class ProductNotFoundException(handle: String) : IOException("No product-json found for handle: $handle")
+class ProductNotFoundException(handle: String) : IOException("No inventory data found for handle: $handle")
 
 /**
  * Talks to vinegarsyndrome.com's public Shopify storefront endpoints.
- * No API key: search uses the storefront predictive-search endpoint, product
- * detail is scraped from the `product-json` script tag embedded in the product page.
+ * No API key: search uses the storefront predictive-search endpoint, product detail comes from
+ * the `/products/{handle}.js` endpoint, and inventory is scraped from the product page.
  */
 class VinegarSyndromeApi(
     private val client: OkHttpClient = OkHttpClient(),
@@ -46,21 +46,40 @@ class VinegarSyndromeApi(
     }
 
     suspend fun fetchProduct(handle: String): ProductDetail = withContext(Dispatchers.IO) {
+        val productJson = get("$BASE_URL/products/$handle.js", accept = "application/json")
+        val product = json.decodeFromString<ProductDetail>(productJson)
+
+        val inventory = fetchInventory(handle)
+        product.copy(
+            variants = product.variants.map { variant ->
+                variant.copy(inventoryQuantity = inventory[variant.id.toString()]?.quantity)
+            },
+        )
+    }
+
+    /**
+     * Per-variant inventory isn't in the `.js` payload; the theme exposes it as a JSON map on the
+     * product page's `<product-inventory data-vs-inventory="{variantId: {q, m, p}}">` element.
+     */
+    private fun fetchInventory(handle: String): Map<String, VariantInventory> {
+        val html = get("$BASE_URL/products/$handle")
+        val inventoryJson = Jsoup.parse(html).selectFirst("product-inventory[data-vs-inventory]")
+            ?.attr("data-vs-inventory")
+            ?: throw ProductNotFoundException(handle)
+        return json.decodeFromString(inventoryJson)
+    }
+
+    private fun get(url: String, accept: String? = null): String {
         val request = Request.Builder()
-            .url("$BASE_URL/products/$handle")
+            .url(url)
             .header("User-Agent", USER_AGENT)
+            .apply { if (accept != null) header("Accept", accept) }
             .build()
 
-        val html = client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Product fetch failed: HTTP ${response.code}")
+        return client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Fetch failed for $url: HTTP ${response.code}")
             response.body?.string().orEmpty()
         }
-
-        val doc = Jsoup.parse(html)
-        val scriptJson = doc.selectFirst("script.product-json")?.data()
-            ?: throw ProductNotFoundException(handle)
-
-        json.decodeFromString<ProductDetail>(scriptJson)
     }
 }
 
