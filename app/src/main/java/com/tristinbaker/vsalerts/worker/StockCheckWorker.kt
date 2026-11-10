@@ -6,12 +6,16 @@ import androidx.work.WorkerParameters
 import com.tristinbaker.vsalerts.data.AppDatabase
 import com.tristinbaker.vsalerts.data.AppSettings
 import com.tristinbaker.vsalerts.data.TrackedMovie
+import com.tristinbaker.vsalerts.network.RateLimitedException
 import com.tristinbaker.vsalerts.network.StorefrontApi
 import com.tristinbaker.vsalerts.network.normalizeImageUrl
 import com.tristinbaker.vsalerts.notification.postAlertNotification
 import com.tristinbaker.vsalerts.util.formatCents
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+
+private const val DELAY_BETWEEN_CHECKS_MS = 5_000L
 
 /** Re-checks every tracked movie's price/stock and fires alerts on meaningful changes. */
 class StockCheckWorker(
@@ -24,11 +28,17 @@ class StockCheckWorker(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val dao = AppDatabase.get(applicationContext).trackedMovieDao()
         val settings = AppSettings.get(applicationContext)
-        val movies = dao.getAll()
+        // Stalest first, so a run cut short by rate limiting picks up where it left off on retry.
+        val movies = dao.getAll().sortedBy { it.lastCheckedAt }
 
-        for (movie in movies) {
+        for ((index, movie) in movies.withIndex()) {
+            // Each check is two requests; firing them back to back gets the stores to rate-limit us.
+            if (index > 0) delay(DELAY_BETWEEN_CHECKS_MS)
             try {
                 checkMovie(movie, dao, settings)
+            } catch (e: RateLimitedException) {
+                // The rest of the batch would be refused too; let WorkManager back off and retry.
+                return@withContext Result.retry()
             } catch (t: Throwable) {
                 // One bad fetch shouldn't sink the whole batch; move on to the next movie.
                 continue

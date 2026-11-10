@@ -22,6 +22,9 @@ private const val ACCEPT_JSON = "application/json"
 
 class ProductNotFoundException(handle: String) : IOException("No inventory data found for handle: $handle")
 
+/** The store answered HTTP 429. Further requests will be refused too, so callers should stop and try later. */
+class RateLimitedException : IOException("The store is limiting requests right now; try again in a few minutes")
+
 /**
  * Talks to each [Store]'s public Shopify storefront endpoints.
  * No API key: search uses the storefront predictive-search endpoint, product detail comes from
@@ -98,6 +101,7 @@ class StorefrontApi(
             .build()
 
         return client.newCall(request).execute().use { response ->
+            if (response.code == 429) throw RateLimitedException()
             if (!response.isSuccessful) throw IOException("Fetch failed for $url: HTTP ${response.code}")
             response.body?.string().orEmpty()
         }

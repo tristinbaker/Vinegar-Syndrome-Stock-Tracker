@@ -51,3 +51,4 @@ The release build type is signed with the debug keystore so it installs without 
 
 * Phone only: background checks can be delayed by Android's Doze mode if battery optimization is not disabled for the app.
 * Price/stock data is scraped from public page content rather than a stable documented API, so a theme change on either site could break parsing. If that happens, `fetchInventory` in `network/StorefrontApi.kt` is the place to fix it. Page requests must send an `Accept` header, or Shopify's bot check answers with a 403.
+* The stores rate-limit product requests (HTTP 429), so background checks are spaced a few seconds apart and a refused run backs off and retries later instead of continuing.
